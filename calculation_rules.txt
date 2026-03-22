@@ -1,0 +1,86 @@
+## HCPI Berechnung (WHS / DGV) – Rechenregeln
+
+### 1. Score Differential (SD)
+
+#### 18-Loch Runde
+
+SD = (GBE - CR - PCC) × (113 / Slope)
+
+#### 9-Loch Runde
+
+SD_9 = (GBE - CR - PCC) × (113 / Slope)
+
+Ergänzung für die fehlenden 9 Löcher:
+SD_expected = ((HCPI × 1.04) + 2.4) / 2
+
+Gesamtes Differential:
+SD_total = SD_9 + SD_expected
+
+---
+
+### 2. Score Liste aktualisieren
+
+* Neues SD_total zur Liste hinzufügen
+* Liste aufsteigend sortieren (niedrig = besser)
+* Maximal 20 Einträge behalten
+
+---
+
+### 3. HCPI Berechnung nach Anzahl Ergebnisse
+
+Anzahl Scores → Berechnung:
+
+1 Ergebnis:
+HCPI = SD1 - 2.0
+
+2 Ergebnisse:
+HCPI = bestes SD - 2.0
+
+3 Ergebnisse:
+HCPI = bestes SD - 2.0
+
+4 Ergebnisse:
+HCPI = bestes SD - 1.0
+
+5 Ergebnisse:
+HCPI = Durchschnitt der besten 1 SD
+
+6 Ergebnisse:
+HCPI = Durchschnitt der besten 2 SD
+
+7–8 Ergebnisse:
+HCPI = Durchschnitt der besten 2 SD
+
+9–11 Ergebnisse:
+HCPI = Durchschnitt der besten 3 SD
+
+12–14 Ergebnisse:
+HCPI = Durchschnitt der besten 4 SD
+
+15–16 Ergebnisse:
+HCPI = Durchschnitt der besten 5 SD
+
+17–18 Ergebnisse:
+HCPI = Durchschnitt der besten 6 SD
+
+19 Ergebnisse:
+HCPI = Durchschnitt der besten 7 SD
+
+20 Ergebnisse:
+HCPI = Durchschnitt der besten 8 SD
+
+---
+
+### 4. Rundung
+
+* Score Differential: auf 1 Dezimalstelle runden
+* HCPI: auf 1 Dezimalstelle runden
+* kaufmännisch runden
+
+---
+
+### 5. Standardannahmen
+
+* PCC = 0, wenn nicht angegeben
+* keine Exceptional Score Reduction
+* keine Soft/Hard Cap berücksichtigen
