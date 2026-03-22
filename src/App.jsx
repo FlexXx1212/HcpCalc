@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import {
   getUserState,
   onAuthChange,
@@ -737,61 +737,82 @@ function App() {
                         <th>Löcher</th>
                         <th>GBE</th>
                         <th>SD</th>
-                        <th>Quelle</th>
-                        <th>Aktion</th>
+                        <th className="desktop-action-header">Aktion</th>
                       </tr>
                     </thead>
                     <tbody>
                       {appState.rounds.length === 0 ? (
                         <tr>
-                          <td colSpan="7" className="empty-cell">
+                          <td colSpan="6" className="empty-cell">
                             Noch keine Runden gespeichert.
                           </td>
                         </tr>
                       ) : (
                         appState.rounds.map((round) => (
-                          <tr key={round.id}>
-                            <td>{formatDate(round.date)}</td>
-                            <td>
-                              <div className="round-title">
-                                <strong>{round.eventName}</strong>
-                                <span>{round.courseName}</span>
-                              </div>
-                            </td>
-                            <td>{round.holes}</td>
-                            <td>{numberDisplay(round.gbe, 0)}</td>
-                            <td>
-                              <span
-                                className={
-                                  usedScoreIds.has(round.id)
-                                    ? 'score-pill score-pill-active'
-                                    : 'score-pill'
-                                }
-                              >
-                                {formatScoreDifferential(round.scoreDifferential)}
-                              </span>
-                            </td>
-                            <td>{round.source === 'import' ? 'Import' : 'Manuell'}</td>
-                            <td>
-                              <div className="row-action-group">
-                                <button
-                                  type="button"
-                                  className="row-copy-button"
-                                  onClick={() => handleCopyRoundToCalculator(round)}
+                          <Fragment key={round.id}>
+                            <tr key={`${round.id}-data`}>
+                              <td>{formatDate(round.date)}</td>
+                              <td>
+                                <div className="round-title">
+                                  <strong>{round.eventName}</strong>
+                                  <span>{round.courseName}</span>
+                                </div>
+                              </td>
+                              <td>{round.holes}</td>
+                              <td>{numberDisplay(round.gbe, 0)}</td>
+                              <td>
+                                <span
+                                  className={
+                                    usedScoreIds.has(round.id)
+                                      ? 'score-pill score-pill-active'
+                                      : 'score-pill'
+                                  }
                                 >
-                                  In Rechner
-                                </button>
-                                <button
-                                  type="button"
-                                  className="row-delete-button"
-                                  onClick={() => handleDeleteRound(round.id)}
-                                  disabled={deletingRoundId === round.id}
-                                >
-                                  {deletingRoundId === round.id ? 'Lösche…' : 'Löschen'}
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
+                                  {formatScoreDifferential(round.scoreDifferential)}
+                                </span>
+                              </td>
+                              <td className="desktop-action-cell">
+                                <div className="row-action-group">
+                                  <button
+                                    type="button"
+                                    className="row-copy-button"
+                                    onClick={() => handleCopyRoundToCalculator(round)}
+                                  >
+                                    In Rechner
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="row-delete-button"
+                                    onClick={() => handleDeleteRound(round.id)}
+                                    disabled={deletingRoundId === round.id}
+                                  >
+                                    {deletingRoundId === round.id ? 'Lösche…' : 'Löschen'}
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr key={`${round.id}-actions`} className="table-action-row">
+                              <td colSpan="6">
+                                <div className="row-action-group">
+                                  <button
+                                    type="button"
+                                    className="row-copy-button"
+                                    onClick={() => handleCopyRoundToCalculator(round)}
+                                  >
+                                    In Rechner
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="row-delete-button"
+                                    onClick={() => handleDeleteRound(round.id)}
+                                    disabled={deletingRoundId === round.id}
+                                  >
+                                    {deletingRoundId === round.id ? 'Lösche…' : 'Löschen'}
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          </Fragment>
                         ))
                       )}
                     </tbody>
