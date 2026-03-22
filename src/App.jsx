@@ -17,11 +17,24 @@ import './App.css'
 const DEFAULT_COURSE_DEFAULTS = {
   courseName: '',
   tee: 'Gelb',
-  holes: '18',
+  holes: '9',
   par: '',
-  courseRating: '72.0',
-  slope: '113',
+  courseRating: '35.8',
+  slope: '134',
   pcc: '0',
+}
+
+const HOLE_DEFAULTS = {
+  9: {
+    holes: '9',
+    courseRating: '35.8',
+    slope: '134',
+  },
+  18: {
+    holes: '18',
+    courseRating: '69.2',
+    slope: '128',
+  },
 }
 
 function parseNumeric(value) {
@@ -57,6 +70,10 @@ function normalizeLastUsedDefaults(defaults) {
     ...DEFAULT_COURSE_DEFAULTS,
     ...(defaults && typeof defaults === 'object' ? defaults : {}),
   }
+}
+
+function getHoleDefaults(holes) {
+  return holes === '18' ? HOLE_DEFAULTS[18] : HOLE_DEFAULTS[9]
 }
 
 function normalizeRound(round) {
@@ -139,17 +156,16 @@ function deriveDefaultsFromRounds(rounds, fallbackDefaults = {}) {
   })
 }
 
-function createRoundDraft(defaults = {}, currentHcp = null) {
+function createRoundDraft(defaults = {}) {
   const normalized = normalizeLastUsedDefaults(defaults)
+  const holeDefaults = getHoleDefaults(normalized.holes)
 
   return {
-    holes: normalized.holes,
+    holes: holeDefaults.holes,
     gbe: '',
-    courseRating: normalized.courseRating,
-    slope: normalized.slope,
+    courseRating: holeDefaults.courseRating,
+    slope: holeDefaults.slope,
     pcc: normalized.pcc,
-    handicapIndexAtTime:
-      currentHcp === null || currentHcp === undefined ? '' : String(currentHcp),
   }
 }
 
@@ -227,8 +243,7 @@ function mergeImportedRounds(existingRounds, importedRounds) {
 function buildPersistedState(currentState, user, nextRounds) {
   const sortedRounds = sortRounds(nextRounds)
   const summary = buildHandicapSummary(sortedRounds)
-  const derivedDefaults = deriveDefaultsFromRounds(
-    sortedRounds,
+  const derivedDefaults = normalizeLastUsedDefaults(
     currentState.profile.lastUsedCourseDefaults,
   )
 
@@ -306,12 +321,8 @@ function App() {
   )
 
   const latestDefaults = useMemo(
-    () =>
-      deriveDefaultsFromRounds(
-        appState.rounds,
-        appState.profile.lastUsedCourseDefaults,
-      ),
-    [appState.profile.lastUsedCourseDefaults, appState.rounds],
+    () => normalizeLastUsedDefaults(appState.profile.lastUsedCourseDefaults),
+    [appState.profile.lastUsedCourseDefaults],
   )
 
   const usedScoreIds = useMemo(
@@ -325,7 +336,7 @@ function App() {
     const courseRating = parseNumeric(draft.courseRating)
     const slope = parseNumeric(draft.slope)
     const pcc = parseNumeric(draft.pcc) ?? 0
-    const handicapIndexAtTime = parseNumeric(draft.handicapIndexAtTime)
+    const handicapIndexAtTime = holes === 9 ? summary.currentHcp : null
 
     if (gbe === null) {
       return {
@@ -347,7 +358,7 @@ function App() {
       return {
         scoreDifferential: null,
         previewHcp: null,
-        status: 'Für 9-Loch muss ein HCPI vor der Runde angegeben werden.',
+        status: 'Für 9-Loch wird zuerst ein aktueller HCP aus vorhandenen Runden benötigt.',
       }
     }
 
@@ -383,7 +394,10 @@ function App() {
       return {
         scoreDifferential,
         previewHcp: previewSummary.currentHcp,
-        status: 'Die Vorschau aktualisiert sich bei jeder Eingabe sofort.',
+        status:
+          holes === 9
+            ? 'Die Vorschau aktualisiert sich sofort. Der HCP vor der Runde wird automatisch aus deinen vorhandenen Runden abgeleitet.'
+            : 'Die Vorschau aktualisiert sich bei jeder Eingabe sofort.',
       }
     } catch (error) {
       return {
@@ -392,7 +406,7 @@ function App() {
         status: error.message,
       }
     }
-  }, [appState.rounds, draft, latestDefaults])
+  }, [appState.rounds, draft, latestDefaults, summary.currentHcp])
 
   async function persistState(nextState) {
     if (!authUser) return
@@ -422,10 +436,20 @@ function App() {
 
   function handleDraftChange(event) {
     const { name, value } = event.target
+    if (name === 'holes') {
+      const holeDefaults = getHoleDefaults(value)
+      setDraft((currentDraft) => ({
+        ...currentDraft,
+        holes: holeDefaults.holes,
+        courseRating: holeDefaults.courseRating,
+        slope: holeDefaults.slope,
+      }))
+      return
+    }
+
     setDraft((currentDraft) => ({
       ...currentDraft,
       [name]: value,
-      ...(name === 'holes' && value === '18' ? { handicapIndexAtTime: '' } : {}),
     }))
   }
 
@@ -444,13 +468,6 @@ function App() {
           : String(round.slope),
       pcc:
         round.pcc === null || round.pcc === undefined ? '0' : String(round.pcc),
-      handicapIndexAtTime:
-        round.holes === 9
-          ? round.handicapIndexAtTime === null ||
-            round.handicapIndexAtTime === undefined
-            ? ''
-            : String(round.handicapIndexAtTime)
-          : '',
     })
     setActionStatus('Rundenwerte in den Rechner übernommen.')
   }
@@ -626,23 +643,9 @@ function App() {
                     <h2>Live neues HCP berechnen</h2>
                     <p>
                       GBE ändern und sofort sehen, wie sich dein HCP verändert.
-                      Course Rating, Slope und PCC werden aus der neuesten Runde
-                      vorbefuellt.
                     </p>
                   </div>
                   <span className="soft-badge">Live</span>
-                </div>
-
-                <div className="context-strip">
-                  <span>
-                    Letzte Runde: <strong>{latestDefaults.courseName || 'Noch kein Import'}</strong>
-                  </span>
-                  <span>
-                    Tee: <strong>{latestDefaults.tee || '—'}</strong>
-                  </span>
-                  <span>
-                    Par: <strong>{latestDefaults.par || '—'}</strong>
-                  </span>
                 </div>
 
                 <div className="round-form">
@@ -654,12 +657,12 @@ function App() {
                         value={draft.holes}
                         onChange={handleDraftChange}
                       >
-                        <option value="18">18</option>
                         <option value="9">9</option>
+                        <option value="18">18</option>
                       </select>
                     </label>
                     <label>
-                      GBE
+                      Gewertetes Brutto Ergebniss (GBE)
                       <input
                         name="gbe"
                         value={draft.gbe}
@@ -669,7 +672,7 @@ function App() {
                       />
                     </label>
                     <label>
-                      Course Rating
+                      Course Rating (CR)
                       <input
                         name="courseRating"
                         value={draft.courseRating}
@@ -678,7 +681,7 @@ function App() {
                       />
                     </label>
                     <label>
-                      Slope
+                      Slope Rating (SR)
                       <input
                         name="slope"
                         value={draft.slope}
@@ -687,7 +690,7 @@ function App() {
                       />
                     </label>
                     <label>
-                      PCC
+                      Playing Conditions Calculation (PCC)
                       <input
                         name="pcc"
                         value={draft.pcc}
@@ -695,74 +698,12 @@ function App() {
                         inputMode="numeric"
                       />
                     </label>
-                    {draft.holes === '9' ? (
-                      <label>
-                        HCPI vor Runde
-                        <input
-                          name="handicapIndexAtTime"
-                          value={draft.handicapIndexAtTime}
-                          onChange={handleDraftChange}
-                          inputMode="decimal"
-                          placeholder="Nur fuer 9-Loch nötig"
-                        />
-                      </label>
-                    ) : null}
                   </div>
 
                   <div className="form-actions">
                     <span className="form-hint">{preview.status}</span>
                   </div>
                 </div>
-              </article>
-            </section>
-
-            <section>
-              <article className="panel wide-panel">
-                <div className="section-header">
-                  <div>
-                    <h2>DGV-Export importieren</h2>
-                    <p>
-                      Lade eine PDF wie den DGV Scoring Record hoch. Die neueste
-                      erkannte Runde liefert danach automatisch die
-                      Standardwerte fuer deine Live-Vorschau.
-                    </p>
-                  </div>
-                  <span className="soft-badge">PDF</span>
-                </div>
-
-                <div className="import-help">
-                  <p>So bekommst du die richtige PDF:</p>
-                  <ol>
-                    <li>
-                      Gehe auf{' '}
-                      <a
-                        href="https://www.golf.de/mein-bereich/scoring-record.html"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        golf.de/mein-bereich/scoring-record.html
-                      </a>
-                    </li>
-                    <li>Klicke unten rechts auf den Button „Drucken“.</li>
-                    <li>Wähle danach den Button „Detailiert“.</li>
-                    <li>Diese PDF kannst du hier hochladen und importieren.</li>
-                  </ol>
-                </div>
-
-                <label className="upload-box">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="application/pdf"
-                    onChange={handleImport}
-                    disabled={isImporting}
-                  />
-                  <span>
-                    {isImporting
-                      ? 'Import läuft…'
-                      : 'PDF auswählen und Runden ins Profil übernehmen'}
-                  </span>
-                </label>
               </article>
             </section>
 
@@ -847,6 +788,56 @@ function App() {
                     </tbody>
                   </table>
                 </div>
+              </article>
+            </section>
+
+            <section>
+              <article className="panel wide-panel">
+                <div className="section-header">
+                  <div>
+                    <h2>DGV-Export importieren</h2>
+                    <p>
+                      Lade eine PDF wie den DGV Scoring Record hoch. Die neueste
+                      erkannte Runde liefert danach automatisch die
+                      Standardwerte fuer deine Live-Vorschau.
+                    </p>
+                  </div>
+                  <span className="soft-badge">PDF</span>
+                </div>
+
+                <div className="import-help">
+                  <p>So bekommst du die richtige PDF:</p>
+                  <ol>
+                    <li>
+                      Gehe auf{' '}
+                      <a
+                        href="https://www.golf.de/mein-bereich/scoring-record.html"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        golf.de/mein-bereich/scoring-record.html
+                      </a>
+                    </li>
+                    <li>Klicke unten rechts auf den Button „Drucken“.</li>
+                    <li>Wähle danach den Button „Detailiert“.</li>
+                    <li>Diese PDF kannst du hier hochladen und importieren.</li>
+                  </ol>
+                </div>
+
+                <label className="upload-box">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handleImport}
+                    disabled={isImporting}
+                  />
+                  <span>
+                    {isImporting
+                      ? 'Import läuft…'
+                      : 'PDF auswählen und Runden ins Profil übernehmen'}
+                  </span>
+                </label>
               </article>
             </section>
           </>
