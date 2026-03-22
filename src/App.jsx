@@ -429,9 +429,30 @@ function App() {
     }))
   }
 
-  function handleResetPreview() {
-    setDraft(createRoundDraft(latestDefaults, summary.currentHcp))
-    setActionStatus('Live-Vorschau auf die neueste Runde zurückgesetzt.')
+  function handleCopyRoundToCalculator(round) {
+    setDraft({
+      holes: String(round.holes ?? 18),
+      gbe:
+        round.gbe === null || round.gbe === undefined ? '' : String(round.gbe),
+      courseRating:
+        round.courseRating === null || round.courseRating === undefined
+          ? ''
+          : String(round.courseRating),
+      slope:
+        round.slope === null || round.slope === undefined
+          ? ''
+          : String(round.slope),
+      pcc:
+        round.pcc === null || round.pcc === undefined ? '0' : String(round.pcc),
+      handicapIndexAtTime:
+        round.holes === 9
+          ? round.handicapIndexAtTime === null ||
+            round.handicapIndexAtTime === undefined
+            ? ''
+            : String(round.handicapIndexAtTime)
+          : '',
+    })
+    setActionStatus('Rundenwerte in den Rechner übernommen.')
   }
 
   async function handleImport(event) {
@@ -689,13 +710,6 @@ function App() {
                   </div>
 
                   <div className="form-actions">
-                    <button
-                      type="button"
-                      className="primary-button"
-                      onClick={handleResetPreview}
-                    >
-                      Werte aus letzter Runde laden
-                    </button>
                     <span className="form-hint">{preview.status}</span>
                   </div>
                 </div>
@@ -714,6 +728,25 @@ function App() {
                     </p>
                   </div>
                   <span className="soft-badge">PDF</span>
+                </div>
+
+                <div className="import-help">
+                  <p>So bekommst du die richtige PDF:</p>
+                  <ol>
+                    <li>
+                      Gehe auf{' '}
+                      <a
+                        href="https://www.golf.de/mein-bereich/scoring-record.html"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        golf.de/mein-bereich/scoring-record.html
+                      </a>
+                    </li>
+                    <li>Klicke unten rechts auf den Button „Drucken“.</li>
+                    <li>Wähle danach den Button „Detailiert“.</li>
+                    <li>Diese PDF kannst du hier hochladen und importieren.</li>
+                  </ol>
                 </div>
 
                 <label className="upload-box">
@@ -790,14 +823,23 @@ function App() {
                             </td>
                             <td>{round.source === 'import' ? 'Import' : 'Manuell'}</td>
                             <td>
-                              <button
-                                type="button"
-                                className="row-delete-button"
-                                onClick={() => handleDeleteRound(round.id)}
-                                disabled={deletingRoundId === round.id}
-                              >
-                                {deletingRoundId === round.id ? 'Lösche…' : 'Löschen'}
-                              </button>
+                              <div className="row-action-group">
+                                <button
+                                  type="button"
+                                  className="row-copy-button"
+                                  onClick={() => handleCopyRoundToCalculator(round)}
+                                >
+                                  In Rechner
+                                </button>
+                                <button
+                                  type="button"
+                                  className="row-delete-button"
+                                  onClick={() => handleDeleteRound(round.id)}
+                                  disabled={deletingRoundId === round.id}
+                                >
+                                  {deletingRoundId === round.id ? 'Lösche…' : 'Löschen'}
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))

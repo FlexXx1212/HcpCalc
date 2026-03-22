@@ -248,6 +248,34 @@ table {
   color: var(--ink-strong);
 }
 
+.import-help {
+  margin-bottom: 1rem;
+  padding: 1rem 1.1rem;
+  border-radius: 20px;
+  background: rgba(242, 239, 194, 0.45);
+  color: var(--ink-soft);
+}
+
+.import-help p {
+  margin: 0 0 0.65rem;
+  color: var(--ink-strong);
+  font-weight: 700;
+}
+
+.import-help ol {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.import-help li + li {
+  margin-top: 0.4rem;
+}
+
+.import-help a {
+  color: var(--brand-dark);
+  font-weight: 700;
+}
+
 .context-strip {
   display: flex;
   flex-wrap: wrap;
@@ -365,6 +393,13 @@ th {
     linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(210, 217, 4, 0.24));
 }
 
+.row-action-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.row-copy-button,
 .row-delete-button {
   border: 0;
   border-radius: 999px;
@@ -372,6 +407,14 @@ th {
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+}
+
+.row-copy-button {
+  color: #fffef7;
+  background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+}
+
+.row-delete-button {
   color: #fffef7;
   background: linear-gradient(135deg, #c95c2d, #a6401a);
 }
