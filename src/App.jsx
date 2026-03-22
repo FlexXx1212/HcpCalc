@@ -410,10 +410,7 @@ function App() {
       return {
         scoreDifferential,
         previewHcp: previewSummary.currentHcp,
-        status:
-          holes === 9
-            ? 'Die Vorschau aktualisiert sich sofort. Der HCP vor der Runde wird automatisch aus deinen vorhandenen Runden abgeleitet.'
-            : 'Die Vorschau aktualisiert sich bei jeder Eingabe sofort.',
+        status: 'Die Vorschau aktualisiert sich bei jeder Eingabe sofort.',
       }
     } catch (error) {
       return {
