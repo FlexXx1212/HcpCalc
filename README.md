@@ -4,17 +4,18 @@ Single Page Application auf Basis von `Vite + React`, mit der Golfspieler ihr Ha
 
 ## Funktionen
 
-- Google-Login über Firebase Auth
-- Persistentes Benutzerprofil in Firestore
+- Offline-First Nutzung direkt im Browser
+- Optionaler Google-Login über Firebase Auth für geräteübergreifenden Sync
+- Lokale Speicherung im Browser plus Cloud-Sync bei Login
 - Import von DGV-Scoring-Record-PDFs
 - Live-Vorschau fuer neues HCP mit minimalen Eingaben
-- Defaultwerte aus der neuesten vorhandenen Runde
+- Feste Standardwerte fuer 9- und 18-Loch
 - HCPI-Berechnung nach `calculation_rules.txt`
 
 ## Voraussetzungen
 
 - Node.js 20.x
-- Ein Firebase-Projekt mit aktivierter Google-Anmeldung
+- Für optionalen Sync: ein Firebase-Projekt mit aktivierter Google-Anmeldung
 
 ## Starten
 
@@ -44,6 +45,8 @@ Jeder Benutzer wird in Firestore unter `users/{uid}` gespeichert. Das Dokument e
   - zuletzt berechneter HCPI
   - aktuell verwendete Score Differentials
 
+Zusätzlich wird derselbe App-Zustand lokal im Browser gespeichert, damit die Anwendung auch ohne Login vollständig nutzbar ist.
+
 ## Fachlogik
 
 Die Berechnung folgt den Regeln in `calculation_rules.txt`:
@@ -56,6 +59,8 @@ Die Berechnung folgt den Regeln in `calculation_rules.txt`:
 - keine Soft-/Hard-Caps
 
 Die Live-Vorschau speichert keine neue Runde, sondern berechnet nur hypothetisch den naechsten HCP auf Basis der aktuellen Eingaben.
+
+Ohne Login bleiben Import, Historie und Berechnung lokal auf dem aktuellen Gerät erhalten. Mit Login wird dieser Zustand zusätzlich mit Firebase synchronisiert.
 
 ## Importformat
 

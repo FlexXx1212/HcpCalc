@@ -12,6 +12,7 @@ import {
   formatScoreDifferential,
 } from './lib/hcp.js'
 import { parseDgvPdfFile } from './lib/dgvParser.js'
+import { loadLocalAppState, saveLocalAppState } from './lib/localState.js'
 import './App.css'
 
 const DEFAULT_COURSE_DEFAULTS = {
@@ -126,36 +127,6 @@ function roundKey(round) {
   ].join('|')
 }
 
-function deriveDefaultsFromRounds(rounds, fallbackDefaults = {}) {
-  const latestRound = sortRounds(rounds)[0]
-
-  if (!latestRound) {
-    return normalizeLastUsedDefaults(fallbackDefaults)
-  }
-
-  return normalizeLastUsedDefaults({
-    courseName: latestRound.courseName,
-    tee: latestRound.tee,
-    holes: String(latestRound.holes ?? 18),
-    par:
-      latestRound.par === null || latestRound.par === undefined
-        ? ''
-        : String(latestRound.par),
-    courseRating:
-      latestRound.courseRating === null || latestRound.courseRating === undefined
-        ? ''
-        : String(latestRound.courseRating),
-    slope:
-      latestRound.slope === null || latestRound.slope === undefined
-        ? ''
-        : String(latestRound.slope),
-    pcc:
-      latestRound.pcc === null || latestRound.pcc === undefined
-        ? '0'
-        : String(latestRound.pcc),
-  })
-}
-
 function createRoundDraft(defaults = {}) {
   const normalized = normalizeLastUsedDefaults(defaults)
   const holeDefaults = getHoleDefaults(normalized.holes)
@@ -192,10 +163,7 @@ function normalizeLoadedState(data, user) {
   const rounds = ensureArray(data?.rounds).map(normalizeRound)
   const sortedRounds = sortRounds(rounds)
   const summary = buildHandicapSummary(sortedRounds)
-  const derivedDefaults = deriveDefaultsFromRounds(
-    sortedRounds,
-    data?.profile?.lastUsedCourseDefaults,
-  )
+  const storedDefaults = normalizeLastUsedDefaults(data?.profile?.lastUsedCourseDefaults)
 
   return {
     profile: {
@@ -207,7 +175,7 @@ function normalizeLoadedState(data, user) {
         base.profile.displayName,
       email: data?.profile?.email ?? user?.email ?? base.profile.email,
       currentHcp: summary.currentHcp,
-      lastUsedCourseDefaults: derivedDefaults,
+      lastUsedCourseDefaults: storedDefaults,
     },
     rounds: sortedRounds,
     calculationSnapshot: {
@@ -240,6 +208,20 @@ function mergeImportedRounds(existingRounds, importedRounds) {
   }
 }
 
+function mergeRoundCollections(primaryRounds, secondaryRounds) {
+  const seen = new Set(primaryRounds.map(roundKey))
+  const additions = []
+
+  for (const round of secondaryRounds) {
+    const key = roundKey(round)
+    if (seen.has(key)) continue
+    seen.add(key)
+    additions.push(round)
+  }
+
+  return sortRounds([...primaryRounds, ...additions])
+}
+
 function buildPersistedState(currentState, user, nextRounds) {
   const sortedRounds = sortRounds(nextRounds)
   const summary = buildHandicapSummary(sortedRounds)
@@ -267,6 +249,28 @@ function buildPersistedState(currentState, user, nextRounds) {
   }
 }
 
+function mergeAppStates(localState, remoteState, user) {
+  const mergedRounds = mergeRoundCollections(localState.rounds, remoteState.rounds)
+
+  return buildPersistedState(
+    {
+      profile: {
+        displayName:
+          user?.displayName ??
+          remoteState.profile.displayName ??
+          localState.profile.displayName,
+        email: user?.email ?? remoteState.profile.email ?? localState.profile.email,
+        lastUsedCourseDefaults: normalizeLastUsedDefaults(
+          remoteState.profile.lastUsedCourseDefaults ??
+            localState.profile.lastUsedCourseDefaults,
+        ),
+      },
+    },
+    user,
+    mergedRounds,
+  )
+}
+
 function App() {
   const [authUser, setAuthUser] = useState(null)
   const [appState, setAppState] = useState(createEmptyState())
@@ -278,12 +282,17 @@ function App() {
   const fileInputRef = useRef(null)
 
   useEffect(() => {
+    const localState = normalizeLoadedState(loadLocalAppState() ?? {}, null)
+    setAppState(localState)
+    setDraft(createRoundDraft(localState.profile.lastUsedCourseDefaults))
+
     const unsubscribe = onAuthChange(async (user) => {
       setAuthUser(user)
 
       if (!user) {
-        setAppState(createEmptyState())
-        setDraft(createRoundDraft())
+        const currentLocalState = normalizeLoadedState(loadLocalAppState() ?? {}, null)
+        setAppState(currentLocalState)
+        setDraft(createRoundDraft(currentLocalState.profile.lastUsedCourseDefaults))
         setAuthStatus('ready')
         return
       }
@@ -291,22 +300,29 @@ function App() {
       setAuthStatus('loading')
 
       try {
-        const remoteState = await getUserState(user.uid)
-        const normalized = normalizeLoadedState(remoteState ?? {}, user)
-        setAppState(normalized)
-        setDraft(
-          createRoundDraft(
-            normalized.profile.lastUsedCourseDefaults,
-            normalized.profile.currentHcp,
-          ),
-        )
-        setActionStatus('Profil geladen.')
+        const currentLocalState = normalizeLoadedState(loadLocalAppState() ?? {}, user)
+        const remoteState = normalizeLoadedState((await getUserState(user.uid)) ?? {}, user)
+        const mergedState = mergeAppStates(currentLocalState, remoteState, user)
+
+        saveLocalAppState(mergedState)
+        setAppState(mergedState)
+        setDraft(createRoundDraft(mergedState.profile.lastUsedCourseDefaults))
+
+        try {
+          await saveUserState(user.uid, mergedState)
+          setActionStatus('Cloud-Sync aktiv. Daten werden lokal und online gespeichert.')
+        } catch (syncError) {
+          console.error(syncError)
+          setActionStatus(
+            'Lokal geladen. Cloud-Sync konnte nicht vollständig aktualisiert werden.',
+          )
+        }
       } catch (error) {
         console.error(error)
-        const fallback = createEmptyState(user)
+        const fallback = normalizeLoadedState(loadLocalAppState() ?? {}, user)
         setAppState(fallback)
-        setDraft(createRoundDraft())
-        setActionStatus('Profil konnte nicht geladen werden.')
+        setDraft(createRoundDraft(fallback.profile.lastUsedCourseDefaults))
+        setActionStatus('Lokale Daten geladen. Cloud-Profil konnte nicht gelesen werden.')
       } finally {
         setAuthStatus('ready')
       }
@@ -409,9 +425,20 @@ function App() {
   }, [appState.rounds, draft, latestDefaults, summary.currentHcp])
 
   async function persistState(nextState) {
-    if (!authUser) return
-    await saveUserState(authUser.uid, nextState)
+    saveLocalAppState(nextState)
     setAppState(nextState)
+
+    if (!authUser) {
+      return { syncedToCloud: false, localOnly: true }
+    }
+
+    try {
+      await saveUserState(authUser.uid, nextState)
+      return { syncedToCloud: true, localOnly: false }
+    } catch (error) {
+      console.error(error)
+      return { syncedToCloud: false, localOnly: false, error }
+    }
   }
 
   async function handleSignIn() {
@@ -475,7 +502,7 @@ function App() {
   async function handleImport(event) {
     const file = event.target.files?.[0]
 
-    if (!file || !authUser) return
+    if (!file) return
 
     setIsImporting(true)
     setActionStatus('')
@@ -494,15 +521,12 @@ function App() {
       )
 
       const nextState = buildPersistedState(appState, authUser, merged)
-      await persistState(nextState)
-      setDraft(
-        createRoundDraft(
-          nextState.profile.lastUsedCourseDefaults,
-          nextState.profile.currentHcp,
-        ),
-      )
+      const persistenceResult = await persistState(nextState)
+      setDraft(createRoundDraft(nextState.profile.lastUsedCourseDefaults))
       setActionStatus(
-        `${importedCount} Runde(n) importiert, ${skippedCount} Dublette(n) übersprungen.`,
+        persistenceResult.syncedToCloud
+          ? `${importedCount} Runde(n) importiert, ${skippedCount} Dublette(n) übersprungen. Cloud-Sync aktualisiert.`
+          : `${importedCount} Runde(n) importiert, ${skippedCount} Dublette(n) übersprungen. Daten lokal gespeichert.`,
       )
     } catch (error) {
       console.error(error)
@@ -516,8 +540,6 @@ function App() {
   }
 
   async function handleDeleteRound(roundId) {
-    if (!authUser) return
-
     const round = appState.rounds.find((entry) => entry.id === roundId)
     if (!round) return
 
@@ -532,14 +554,13 @@ function App() {
     try {
       const nextRounds = appState.rounds.filter((entry) => entry.id !== roundId)
       const nextState = buildPersistedState(appState, authUser, nextRounds)
-      await persistState(nextState)
-      setDraft(
-        createRoundDraft(
-          nextState.profile.lastUsedCourseDefaults,
-          nextState.profile.currentHcp,
-        ),
+      const persistenceResult = await persistState(nextState)
+      setDraft(createRoundDraft(nextState.profile.lastUsedCourseDefaults))
+      setActionStatus(
+        persistenceResult.syncedToCloud
+          ? 'Runde gelöscht und Cloud-Sync aktualisiert.'
+          : 'Runde gelöscht und lokal gespeichert.',
       )
-      setActionStatus('Runde gelöscht.')
     } catch (error) {
       console.error(error)
       setActionStatus('Runde konnte nicht gelöscht werden.')
@@ -588,7 +609,7 @@ function App() {
               </>
             ) : (
               <button className="primary-button" onClick={handleSignIn}>
-                Mit Google anmelden
+                Mit Google anmelden für Sync
               </button>
             )}
           </div>
@@ -619,30 +640,15 @@ function App() {
           ))}
         </section>
 
-        {!authUser ? (
-          <section className="panel auth-panel">
-            <h2>Starte mit deinem Profil</h2>
-            <p>
-              Melde dich an, um DGV-Exporte zu importieren und mit deinen echten
-              Runden ein neues HCP live vorzuberechnen.
-            </p>
-            <button
-              className="primary-button"
-              onClick={handleSignIn}
-              disabled={authStatus === 'loading'}
-            >
-              {authStatus === 'loading' ? 'Lade…' : 'Mit Google anmelden'}
-            </button>
-          </section>
-        ) : (
-          <>
-            <section>
-              <article className="panel wide-panel">
+        <>
+          <section>
+            <article className="panel wide-panel">
                 <div className="section-header">
                   <div>
                     <h2>Live neues HCP berechnen</h2>
                     <p>
-                      GBE ändern und sofort sehen, wie sich dein HCP verändert.
+                      GBE ändern und sofort sehen, wie sich dein HCP verändert
+                      – auch ohne Login.
                     </p>
                   </div>
                   <span className="soft-badge">Live</span>
@@ -704,15 +710,18 @@ function App() {
                     <span className="form-hint">{preview.status}</span>
                   </div>
                 </div>
-              </article>
-            </section>
+            </article>
+          </section>
 
-            <section>
-              <article className="panel wide-panel">
+          <section>
+            <article className="panel wide-panel">
                 <div className="section-header">
                   <div>
                     <h2>Score-Historie</h2>
-                    <p>Alle vorhandenen Runden in deinem Profil.</p>
+                    <p>
+                      Alle gespeicherten Runden auf diesem Gerät
+                      {authUser ? ' und im verknüpften Sync-Profil.' : '.'}
+                    </p>
                   </div>
                   <span className="soft-badge">
                     {appState.rounds.length} Einträge
@@ -788,18 +797,18 @@ function App() {
                     </tbody>
                   </table>
                 </div>
-              </article>
-            </section>
+            </article>
+          </section>
 
-            <section>
-              <article className="panel wide-panel">
+          <section>
+            <article className="panel wide-panel">
                 <div className="section-header">
                   <div>
                     <h2>DGV-Export importieren</h2>
                     <p>
-                      Lade eine PDF wie den DGV Scoring Record hoch. Die neueste
-                      erkannte Runde liefert danach automatisch die
-                      Standardwerte fuer deine Live-Vorschau.
+                      Lade eine PDF wie den DGV Scoring Record hoch. Der Import
+                      funktioniert auch ohne Login und bleibt auf diesem Gerät
+                      gespeichert.
                     </p>
                   </div>
                   <span className="soft-badge">PDF</span>
@@ -838,10 +847,29 @@ function App() {
                       : 'PDF auswählen und Runden ins Profil übernehmen'}
                   </span>
                 </label>
-              </article>
-            </section>
-          </>
-        )}
+            </article>
+          </section>
+        </>
+
+        <section className="panel auth-panel">
+          <h2>{authUser ? 'Cloud-Sync aktiv' : 'Ohne Login direkt nutzbar'}</h2>
+          <p>
+            {authUser
+              ? 'Deine Runden werden lokal im Browser und zusätzlich in Firebase gespeichert. So kannst du sie auf mehreren Geräten nutzen.'
+              : 'Rechner, Import, Historie und Löschen funktionieren direkt im Browser. Mit Google-Login aktivierst du zusätzlich den geräteübergreifenden Sync.'}
+          </p>
+          {!authUser ? (
+            <button
+              className="primary-button"
+              onClick={handleSignIn}
+              disabled={authStatus === 'loading'}
+            >
+              {authStatus === 'loading'
+                ? 'Lade…'
+                : 'Mit Google anmelden für Sync'}
+            </button>
+          ) : null}
+        </section>
 
         {actionStatus ? (
           <section className="panel status-panel">
