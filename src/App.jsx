@@ -14,44 +14,15 @@ import {
 import { parseDgvPdfFile } from './lib/dgvParser.js'
 import './App.css'
 
-const TODAY = new Date().toISOString().slice(0, 10)
-
 const DEFAULT_COURSE_DEFAULTS = {
   courseName: '',
-  clubNumber: '',
   tee: 'Gelb',
   holes: '18',
-  type: 'S',
-  par: '72',
+  par: '',
   courseRating: '72.0',
   slope: '113',
   pcc: '0',
 }
-
-const createRoundDraft = (defaults = {}, handicapIndexAtTime = '') => ({
-  date: TODAY,
-  eventName: '',
-  gbe: '',
-  handicapIndexAtTime,
-  ...DEFAULT_COURSE_DEFAULTS,
-  ...defaults,
-})
-
-const createEmptyState = (user = null) => ({
-  profile: {
-    displayName: user?.displayName ?? '',
-    email: user?.email ?? '',
-    currentHcp: null,
-    lastUsedCourseDefaults: { ...DEFAULT_COURSE_DEFAULTS },
-  },
-  rounds: [],
-  calculationSnapshot: {
-    computedHcp: null,
-    activeCount: 0,
-    usedScores: [],
-    updatedAt: null,
-  },
-})
 
 function parseNumeric(value) {
   if (typeof value === 'number') return Number.isFinite(value) ? value : null
@@ -66,6 +37,21 @@ function ensureArray(value) {
   return Array.isArray(value) ? value : []
 }
 
+function numberDisplay(value, digits = 1) {
+  if (value === null || value === undefined || Number.isNaN(value)) return '—'
+  return new Intl.NumberFormat('de-DE', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value)
+}
+
+function formatDate(value) {
+  if (!value) return '—'
+  return new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium' }).format(
+    new Date(value),
+  )
+}
+
 function normalizeLastUsedDefaults(defaults) {
   return {
     ...DEFAULT_COURSE_DEFAULTS,
@@ -74,10 +60,13 @@ function normalizeLastUsedDefaults(defaults) {
 }
 
 function normalizeRound(round) {
-  const normalized = {
+  return {
     id: round?.id ?? crypto.randomUUID(),
     source: round?.source === 'import' ? 'import' : 'manual',
-    date: typeof round?.date === 'string' ? round.date : TODAY,
+    date:
+      typeof round?.date === 'string'
+        ? round.date
+        : new Date().toISOString().slice(0, 10),
     courseName: round?.courseName ?? '',
     clubNumber: round?.clubNumber ?? '',
     eventName: round?.eventName ?? '',
@@ -94,47 +83,18 @@ function normalizeRound(round) {
     scoreDifferential: parseNumeric(round?.scoreDifferential),
     createdAt: round?.createdAt ?? new Date().toISOString(),
   }
-
-  return normalized
-}
-
-function normalizeLoadedState(data, user) {
-  const base = createEmptyState(user)
-  const rounds = ensureArray(data?.rounds).map(normalizeRound)
-  const summary = buildHandicapSummary(rounds)
-
-  return {
-    profile: {
-      ...base.profile,
-      ...(data?.profile && typeof data.profile === 'object' ? data.profile : {}),
-      displayName:
-        data?.profile?.displayName ??
-        user?.displayName ??
-        base.profile.displayName,
-      email: data?.profile?.email ?? user?.email ?? base.profile.email,
-      currentHcp: summary.currentHcp,
-      lastUsedCourseDefaults: normalizeLastUsedDefaults(
-        data?.profile?.lastUsedCourseDefaults,
-      ),
-    },
-    rounds: sortRounds(rounds),
-    calculationSnapshot: {
-      computedHcp: summary.currentHcp,
-      activeCount: summary.activeDifferentials.length,
-      usedScores: summary.usedDifferentials.map((entry) => ({
-        id: entry.id,
-        scoreDifferential: entry.scoreDifferential,
-      })),
-      updatedAt: data?.calculationSnapshot?.updatedAt ?? null,
-    },
-  }
 }
 
 function sortRounds(rounds) {
   return [...rounds].sort((left, right) => {
     const leftDate = new Date(left.date).getTime()
     const rightDate = new Date(right.date).getTime()
-    return rightDate - leftDate
+
+    if (rightDate !== leftDate) return rightDate - leftDate
+
+    const leftCreated = new Date(left.createdAt ?? left.date).getTime()
+    const rightCreated = new Date(right.createdAt ?? right.date).getTime()
+    return rightCreated - leftCreated
   })
 }
 
@@ -147,6 +107,103 @@ function roundKey(round) {
     round.gbe,
     round.scoreDifferential,
   ].join('|')
+}
+
+function deriveDefaultsFromRounds(rounds, fallbackDefaults = {}) {
+  const latestRound = sortRounds(rounds)[0]
+
+  if (!latestRound) {
+    return normalizeLastUsedDefaults(fallbackDefaults)
+  }
+
+  return normalizeLastUsedDefaults({
+    courseName: latestRound.courseName,
+    tee: latestRound.tee,
+    holes: String(latestRound.holes ?? 18),
+    par:
+      latestRound.par === null || latestRound.par === undefined
+        ? ''
+        : String(latestRound.par),
+    courseRating:
+      latestRound.courseRating === null || latestRound.courseRating === undefined
+        ? ''
+        : String(latestRound.courseRating),
+    slope:
+      latestRound.slope === null || latestRound.slope === undefined
+        ? ''
+        : String(latestRound.slope),
+    pcc:
+      latestRound.pcc === null || latestRound.pcc === undefined
+        ? '0'
+        : String(latestRound.pcc),
+  })
+}
+
+function createRoundDraft(defaults = {}, currentHcp = null) {
+  const normalized = normalizeLastUsedDefaults(defaults)
+
+  return {
+    holes: normalized.holes,
+    gbe: '',
+    courseRating: normalized.courseRating,
+    slope: normalized.slope,
+    pcc: normalized.pcc,
+    handicapIndexAtTime:
+      currentHcp === null || currentHcp === undefined ? '' : String(currentHcp),
+  }
+}
+
+function createEmptyState(user = null) {
+  return {
+    profile: {
+      displayName: user?.displayName ?? '',
+      email: user?.email ?? '',
+      currentHcp: null,
+      lastUsedCourseDefaults: { ...DEFAULT_COURSE_DEFAULTS },
+    },
+    rounds: [],
+    calculationSnapshot: {
+      computedHcp: null,
+      activeCount: 0,
+      usedScores: [],
+      updatedAt: null,
+    },
+  }
+}
+
+function normalizeLoadedState(data, user) {
+  const base = createEmptyState(user)
+  const rounds = ensureArray(data?.rounds).map(normalizeRound)
+  const sortedRounds = sortRounds(rounds)
+  const summary = buildHandicapSummary(sortedRounds)
+  const derivedDefaults = deriveDefaultsFromRounds(
+    sortedRounds,
+    data?.profile?.lastUsedCourseDefaults,
+  )
+
+  return {
+    profile: {
+      ...base.profile,
+      ...(data?.profile && typeof data.profile === 'object' ? data.profile : {}),
+      displayName:
+        data?.profile?.displayName ??
+        user?.displayName ??
+        base.profile.displayName,
+      email: data?.profile?.email ?? user?.email ?? base.profile.email,
+      currentHcp: summary.currentHcp,
+      lastUsedCourseDefaults: derivedDefaults,
+    },
+    rounds: sortedRounds,
+    calculationSnapshot: {
+      computedHcp: summary.currentHcp,
+      activeCount: summary.activeDifferentials.length,
+      usedScores: summary.usedDifferentials.map((entry) => ({
+        id: entry.id,
+        scoreDifferential: entry.scoreDifferential,
+      })),
+      updatedAt: data?.calculationSnapshot?.updatedAt ?? null,
+    },
+  }
 }
 
 function mergeImportedRounds(existingRounds, importedRounds) {
@@ -167,17 +224,22 @@ function mergeImportedRounds(existingRounds, importedRounds) {
   }
 }
 
-function buildPersistedState(currentState, user, nextRounds, lastUsedCourseDefaults) {
-  const summary = buildHandicapSummary(nextRounds)
+function buildPersistedState(currentState, user, nextRounds) {
+  const sortedRounds = sortRounds(nextRounds)
+  const summary = buildHandicapSummary(sortedRounds)
+  const derivedDefaults = deriveDefaultsFromRounds(
+    sortedRounds,
+    currentState.profile.lastUsedCourseDefaults,
+  )
 
   return {
     profile: {
       displayName: user?.displayName ?? currentState.profile.displayName,
       email: user?.email ?? currentState.profile.email,
       currentHcp: summary.currentHcp,
-      lastUsedCourseDefaults: normalizeLastUsedDefaults(lastUsedCourseDefaults),
+      lastUsedCourseDefaults: derivedDefaults,
     },
-    rounds: sortRounds(nextRounds),
+    rounds: sortedRounds,
     calculationSnapshot: {
       computedHcp: summary.currentHcp,
       activeCount: summary.activeDifferentials.length,
@@ -190,33 +252,14 @@ function buildPersistedState(currentState, user, nextRounds, lastUsedCourseDefau
   }
 }
 
-function numberDisplay(value, digits = 1) {
-  if (value === null || value === undefined || Number.isNaN(value)) return '—'
-  return new Intl.NumberFormat('de-DE', {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  }).format(value)
-}
-
-function formatDate(value) {
-  if (!value) return '—'
-  return new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium' }).format(
-    new Date(value),
-  )
-}
-
-function toInputValue(value) {
-  return value === null || value === undefined ? '' : String(value)
-}
-
 function App() {
   const [authUser, setAuthUser] = useState(null)
   const [appState, setAppState] = useState(createEmptyState())
   const [draft, setDraft] = useState(createRoundDraft())
   const [authStatus, setAuthStatus] = useState('loading')
   const [actionStatus, setActionStatus] = useState('')
-  const [isSaving, setIsSaving] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
+  const [deletingRoundId, setDeletingRoundId] = useState(null)
   const fileInputRef = useRef(null)
 
   useEffect(() => {
@@ -239,7 +282,7 @@ function App() {
         setDraft(
           createRoundDraft(
             normalized.profile.lastUsedCourseDefaults,
-            toInputValue(normalized.profile.currentHcp),
+            normalized.profile.currentHcp,
           ),
         )
         setActionStatus('Profil geladen.')
@@ -262,22 +305,99 @@ function App() {
     [appState.rounds],
   )
 
+  const latestDefaults = useMemo(
+    () =>
+      deriveDefaultsFromRounds(
+        appState.rounds,
+        appState.profile.lastUsedCourseDefaults,
+      ),
+    [appState.profile.lastUsedCourseDefaults, appState.rounds],
+  )
+
   const usedScoreIds = useMemo(
     () => new Set(summary.usedDifferentials.map((entry) => entry.id)),
     [summary.usedDifferentials],
   )
 
-  async function persistState(nextState) {
-    if (!authUser) return
+  const preview = useMemo(() => {
+    const holes = Number(draft.holes)
+    const gbe = parseNumeric(draft.gbe)
+    const courseRating = parseNumeric(draft.courseRating)
+    const slope = parseNumeric(draft.slope)
+    const pcc = parseNumeric(draft.pcc) ?? 0
+    const handicapIndexAtTime = parseNumeric(draft.handicapIndexAtTime)
 
-    setIsSaving(true)
+    if (gbe === null) {
+      return {
+        scoreDifferential: null,
+        previewHcp: null,
+        status: 'Trage ein GBE ein, um dein neues HCP live zu sehen.',
+      }
+    }
+
+    if (courseRating === null || slope === null) {
+      return {
+        scoreDifferential: null,
+        previewHcp: null,
+        status: 'Für die Live-Berechnung werden Course Rating und Slope benötigt.',
+      }
+    }
+
+    if (holes === 9 && handicapIndexAtTime === null) {
+      return {
+        scoreDifferential: null,
+        previewHcp: null,
+        status: 'Für 9-Loch muss ein HCPI vor der Runde angegeben werden.',
+      }
+    }
 
     try {
-      await saveUserState(authUser.uid, nextState)
-      setAppState(nextState)
-    } finally {
-      setIsSaving(false)
+      const scoreDifferential = calculateScoreDifferential({
+        holes,
+        gbe,
+        courseRating,
+        slope,
+        pcc,
+        handicapIndexAtTime,
+      })
+
+      const previewRound = normalizeRound({
+        id: 'preview-round',
+        source: 'manual',
+        date: new Date().toISOString().slice(0, 10),
+        eventName: 'Live-Vorschau',
+        courseName: latestDefaults.courseName,
+        tee: latestDefaults.tee,
+        holes,
+        gbe,
+        par: parseNumeric(latestDefaults.par),
+        courseRating,
+        slope,
+        pcc,
+        handicapIndexAtTime,
+        scoreDifferential,
+      })
+
+      const previewSummary = buildHandicapSummary([previewRound, ...appState.rounds])
+
+      return {
+        scoreDifferential,
+        previewHcp: previewSummary.currentHcp,
+        status: 'Die Vorschau aktualisiert sich bei jeder Eingabe sofort.',
+      }
+    } catch (error) {
+      return {
+        scoreDifferential: null,
+        previewHcp: null,
+        status: error.message,
+      }
     }
+  }, [appState.rounds, draft, latestDefaults])
+
+  async function persistState(nextState) {
+    if (!authUser) return
+    await saveUserState(authUser.uid, nextState)
+    setAppState(nextState)
   }
 
   async function handleSignIn() {
@@ -302,112 +422,16 @@ function App() {
 
   function handleDraftChange(event) {
     const { name, value } = event.target
-    setDraft((currentDraft) => ({ ...currentDraft, [name]: value }))
+    setDraft((currentDraft) => ({
+      ...currentDraft,
+      [name]: value,
+      ...(name === 'holes' && value === '18' ? { handicapIndexAtTime: '' } : {}),
+    }))
   }
 
-  async function handleManualSubmit(event) {
-    event.preventDefault()
-
-    if (!authUser) {
-      setActionStatus('Bitte zuerst anmelden.')
-      return
-    }
-
-    const holes = Number(draft.holes)
-    const gbe = parseNumeric(draft.gbe)
-    const par = parseNumeric(draft.par)
-    const courseRating = parseNumeric(draft.courseRating)
-    const slope = parseNumeric(draft.slope)
-    const pcc = parseNumeric(draft.pcc) ?? 0
-    const handicapIndexAtTime =
-      parseNumeric(draft.handicapIndexAtTime) ?? summary.currentHcp
-
-    if (!draft.date || !draft.courseName.trim() || gbe === null) {
-      setActionStatus('Bitte Datum, Platz und GBE ausfüllen.')
-      return
-    }
-
-    if (par === null || courseRating === null || slope === null) {
-      setActionStatus('Bitte Par, Course Rating und Slope angeben.')
-      return
-    }
-
-    if (holes === 9 && handicapIndexAtTime === null) {
-      setActionStatus(
-        'Für 9-Loch-Runden wird ein HCPI vor der Runde benötigt.',
-      )
-      return
-    }
-
-    let scoreDifferential
-
-    try {
-      scoreDifferential = calculateScoreDifferential({
-        holes,
-        gbe,
-        courseRating,
-        slope,
-        pcc,
-        handicapIndexAtTime,
-      })
-    } catch (error) {
-      console.error(error)
-      setActionStatus(error.message)
-      return
-    }
-
-    const round = normalizeRound({
-      id: crypto.randomUUID(),
-      source: 'manual',
-      date: draft.date,
-      courseName: draft.courseName.trim(),
-      clubNumber: draft.clubNumber.trim(),
-      eventName: draft.eventName.trim() || 'Manueller Eintrag',
-      tee: draft.tee.trim(),
-      holes,
-      type: draft.type,
-      gbe,
-      par,
-      courseRating,
-      slope,
-      pcc,
-      handicapIndexAtTime,
-      scoreDifferential,
-      createdAt: new Date().toISOString(),
-    })
-
-    const lastUsedCourseDefaults = {
-      courseName: round.courseName,
-      clubNumber: round.clubNumber,
-      tee: round.tee,
-      holes: String(round.holes),
-      type: round.type,
-      par: String(round.par ?? ''),
-      courseRating: String(round.courseRating ?? ''),
-      slope: String(round.slope ?? ''),
-      pcc: String(round.pcc ?? 0),
-    }
-
-    const nextState = buildPersistedState(
-      appState,
-      authUser,
-      [round, ...appState.rounds],
-      lastUsedCourseDefaults,
-    )
-
-    try {
-      await persistState(nextState)
-      setDraft(
-        createRoundDraft(
-          lastUsedCourseDefaults,
-          toInputValue(nextState.profile.currentHcp),
-        ),
-      )
-      setActionStatus('Neue Runde gespeichert und Handicap aktualisiert.')
-    } catch (error) {
-      console.error(error)
-      setActionStatus('Runde konnte nicht gespeichert werden.')
-    }
+  function handleResetPreview() {
+    setDraft(createRoundDraft(latestDefaults, summary.currentHcp))
+    setActionStatus('Live-Vorschau auf die neueste Runde zurückgesetzt.')
   }
 
   async function handleImport(event) {
@@ -431,18 +455,14 @@ function App() {
         importedRounds,
       )
 
-      const nextState = buildPersistedState(
-        appState,
-        authUser,
-        merged,
-        appState.profile.lastUsedCourseDefaults,
-      )
-
+      const nextState = buildPersistedState(appState, authUser, merged)
       await persistState(nextState)
-      setDraft((currentDraft) => ({
-        ...currentDraft,
-        handicapIndexAtTime: toInputValue(nextState.profile.currentHcp),
-      }))
+      setDraft(
+        createRoundDraft(
+          nextState.profile.lastUsedCourseDefaults,
+          nextState.profile.currentHcp,
+        ),
+      )
       setActionStatus(
         `${importedCount} Runde(n) importiert, ${skippedCount} Dublette(n) übersprungen.`,
       )
@@ -457,24 +477,54 @@ function App() {
     }
   }
 
+  async function handleDeleteRound(roundId) {
+    if (!authUser) return
+
+    const round = appState.rounds.find((entry) => entry.id === roundId)
+    if (!round) return
+
+    const shouldDelete = window.confirm(
+      `Runde "${round.eventName}" vom ${formatDate(round.date)} wirklich löschen?`,
+    )
+
+    if (!shouldDelete) return
+
+    setDeletingRoundId(roundId)
+
+    try {
+      const nextRounds = appState.rounds.filter((entry) => entry.id !== roundId)
+      const nextState = buildPersistedState(appState, authUser, nextRounds)
+      await persistState(nextState)
+      setDraft(
+        createRoundDraft(
+          nextState.profile.lastUsedCourseDefaults,
+          nextState.profile.currentHcp,
+        ),
+      )
+      setActionStatus('Runde gelöscht.')
+    } catch (error) {
+      console.error(error)
+      setActionStatus('Runde konnte nicht gelöscht werden.')
+    } finally {
+      setDeletingRoundId(null)
+    }
+  }
+
   const statCards = [
     {
-      label: 'Aktueller HCPI',
+      label: 'Aktueller HCP',
       value: numberDisplay(summary.currentHcp),
-      hint:
-        summary.currentHcp === null
-          ? 'Noch keine auswertbaren Runden'
-          : `${summary.usedDifferentials.length} Score(s) in der Berechnung`,
+      hint: 'Dein gespeicherter Profilstand',
     },
     {
-      label: 'Gespeicherte Runden',
-      value: String(appState.rounds.length),
-      hint: 'Importierte und manuelle Einträge',
+      label: 'Live neues HCP',
+      value: numberDisplay(preview.previewHcp),
+      hint: 'Ändert sich sofort mit GBE, CR oder Slope',
     },
     {
-      label: 'Aktive Score-Liste',
-      value: String(summary.activeDifferentials.length),
-      hint: 'Maximal 20 Scores laut Vorgabe',
+      label: 'Vorschau-SD',
+      value: formatScoreDifferential(preview.scoreDifferential),
+      hint: 'Score Differential der Live-Eingabe',
     },
   ]
 
@@ -483,11 +533,10 @@ function App() {
       <header className="hero-panel">
         <div className="hero-copy">
           <span className="eyebrow">Let&apos;s golf</span>
-          <h1>Golf HCPI Rechner mit DGV-Import und eigenem Profil.</h1>
+          <h1>HcpCalc</h1>
           <p>
-            Importiere deinen DGV-Scoring-Record, speichere neue GBE-Runden und
-            berechne dein Handicap direkt in einer modernen Single Page
-            Application.
+            Importiere deinen DGV-Scoring-Record und simuliere dein neues HCP
+            mit einer minimalen Live-Eingabe auf Basis deiner neuesten Runde.
           </p>
           <div className="hero-actions">
             {authUser ? (
@@ -511,8 +560,12 @@ function App() {
           <div className="grass-grid" />
           <div className="hero-card-content">
             <p className="hero-card-label">Live Vorschau</p>
-            <strong>{numberDisplay(summary.currentHcp)}</strong>
-            <span>Handicap-Index nach deinem aktuellen Profilstand</span>
+            <strong>{numberDisplay(preview.previewHcp ?? summary.currentHcp)}</strong>
+            <span>
+              {preview.previewHcp === null
+                ? 'Aktueller HCP aus deinem Profil'
+                : 'Neuer HCP auf Basis deiner aktuellen Eingabe'}
+            </span>
           </div>
         </div>
       </header>
@@ -528,29 +581,12 @@ function App() {
           ))}
         </section>
 
-        <section className="panel intro-panel">
-          <div>
-            <h2>Was die App abdeckt</h2>
-            <p>
-              Grundlage sind die gelieferten Rechenregeln inklusive 9-Loch-
-              Ergänzung, kaufmännischer Rundung, Best-N-Auswahl und einer
-              aktiven Score-Liste mit maximal 20 Differentials.
-            </p>
-          </div>
-          <ul className="feature-list">
-            <li>DGV-PDF-Import pro Benutzerprofil</li>
-            <li>Persistente Course-Defaults für neue GBE-Einträge</li>
-            <li>Firebase Login und Firestore-Speicherung</li>
-            <li>Transparente Anzeige der verwendeten Scores</li>
-          </ul>
-        </section>
-
         {!authUser ? (
           <section className="panel auth-panel">
             <h2>Starte mit deinem Profil</h2>
             <p>
-              Melde dich an, um Runden dauerhaft zu speichern, DGV-Exporte zu
-              importieren und deinen HCPI jederzeit wieder aufzurufen.
+              Melde dich an, um DGV-Exporte zu importieren und mit deinen echten
+              Runden ein neues HCP live vorzuberechnen.
             </p>
             <button
               className="primary-button"
@@ -562,96 +598,34 @@ function App() {
           </section>
         ) : (
           <>
-            <section className="workspace-grid">
-              <article className="panel">
+            <section>
+              <article className="panel wide-panel">
                 <div className="section-header">
                   <div>
-                    <h2>DGV-Export importieren</h2>
+                    <h2>Live neues HCP berechnen</h2>
                     <p>
-                      Lade eine PDF wie den DGV Scoring Record hoch. Die Runden
-                      werden deinem Profil hinzugefügt und Dubletten werden
-                      ausgelassen.
+                      GBE ändern und sofort sehen, wie sich dein HCP verändert.
+                      Course Rating, Slope und PCC werden aus der neuesten Runde
+                      vorbefuellt.
                     </p>
                   </div>
-                  <span className="soft-badge">PDF</span>
+                  <span className="soft-badge">Live</span>
                 </div>
 
-                <label className="upload-box">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="application/pdf"
-                    onChange={handleImport}
-                    disabled={isImporting}
-                  />
+                <div className="context-strip">
                   <span>
-                    {isImporting
-                      ? 'Import läuft…'
-                      : 'PDF auswählen und DGV-Runden importieren'}
+                    Letzte Runde: <strong>{latestDefaults.courseName || 'Noch kein Import'}</strong>
                   </span>
-                </label>
-              </article>
-
-              <article className="panel">
-                <div className="section-header">
-                  <div>
-                    <h2>Neues GBE eintragen</h2>
-                    <p>
-                      Zuletzt verwendete Platzdaten bleiben gespeichert, damit
-                      du Course Rating, Slope oder PCC nicht jedes Mal neu
-                      erfassen musst.
-                    </p>
-                  </div>
-                  <span className="soft-badge">GBE</span>
+                  <span>
+                    Tee: <strong>{latestDefaults.tee || '—'}</strong>
+                  </span>
+                  <span>
+                    Par: <strong>{latestDefaults.par || '—'}</strong>
+                  </span>
                 </div>
 
-                <form className="round-form" onSubmit={handleManualSubmit}>
+                <div className="round-form">
                   <div className="form-grid">
-                    <label>
-                      Datum
-                      <input
-                        name="date"
-                        type="date"
-                        value={draft.date}
-                        onChange={handleDraftChange}
-                      />
-                    </label>
-                    <label>
-                      Turnier / Anlass
-                      <input
-                        name="eventName"
-                        value={draft.eventName}
-                        onChange={handleDraftChange}
-                        placeholder="z. B. Monatsbecher"
-                      />
-                    </label>
-                    <label>
-                      Platz
-                      <input
-                        name="courseName"
-                        value={draft.courseName}
-                        onChange={handleDraftChange}
-                        placeholder="Golfclub"
-                      />
-                    </label>
-                    <label>
-                      Club-Nr.
-                      <input
-                        name="clubNumber"
-                        value={draft.clubNumber}
-                        onChange={handleDraftChange}
-                        placeholder="8822"
-                      />
-                    </label>
-                    <label>
-                      Tees
-                      <input
-                        name="tee"
-                        value={draft.tee}
-                        onChange={handleDraftChange}
-                        placeholder="Gelb"
-                      />
-                    </label>
                     <label>
                       Löcher
                       <select
@@ -664,36 +638,13 @@ function App() {
                       </select>
                     </label>
                     <label>
-                      Art
-                      <select
-                        name="type"
-                        value={draft.type}
-                        onChange={handleDraftChange}
-                      >
-                        <option value="S">Stableford</option>
-                        <option value="Z">Zählspiel</option>
-                        <option value="H">Höchstergebnis</option>
-                        <option value="P">Gegen Par</option>
-                        <option value="G">Gemischt</option>
-                      </select>
-                    </label>
-                    <label>
                       GBE
                       <input
                         name="gbe"
                         value={draft.gbe}
                         onChange={handleDraftChange}
                         inputMode="decimal"
-                        placeholder="95"
-                      />
-                    </label>
-                    <label>
-                      Par
-                      <input
-                        name="par"
-                        value={draft.par}
-                        onChange={handleDraftChange}
-                        inputMode="decimal"
+                        placeholder="z. B. 95"
                       />
                     </label>
                     <label>
@@ -723,39 +674,71 @@ function App() {
                         inputMode="numeric"
                       />
                     </label>
-                    <label className="wide-field">
-                      HCPI vor Runde
-                      <input
-                        name="handicapIndexAtTime"
-                        value={draft.handicapIndexAtTime}
-                        onChange={handleDraftChange}
-                        inputMode="decimal"
-                        placeholder="Wichtig für 9-Loch-Runden"
-                      />
-                    </label>
+                    {draft.holes === '9' ? (
+                      <label>
+                        HCPI vor Runde
+                        <input
+                          name="handicapIndexAtTime"
+                          value={draft.handicapIndexAtTime}
+                          onChange={handleDraftChange}
+                          inputMode="decimal"
+                          placeholder="Nur fuer 9-Loch nötig"
+                        />
+                      </label>
+                    ) : null}
                   </div>
 
                   <div className="form-actions">
-                    <button className="primary-button" disabled={isSaving}>
-                      {isSaving ? 'Speichere…' : 'Runde speichern'}
+                    <button
+                      type="button"
+                      className="primary-button"
+                      onClick={handleResetPreview}
+                    >
+                      Werte aus letzter Runde laden
                     </button>
-                    <span className="form-hint">
-                      Aktueller HCPI als Referenz:{' '}
-                      <strong>{numberDisplay(summary.currentHcp)}</strong>
-                    </span>
+                    <span className="form-hint">{preview.status}</span>
                   </div>
-                </form>
+                </div>
               </article>
             </section>
 
-            <section className="workspace-grid lower-grid">
-              <article className="panel">
+            <section>
+              <article className="panel wide-panel">
+                <div className="section-header">
+                  <div>
+                    <h2>DGV-Export importieren</h2>
+                    <p>
+                      Lade eine PDF wie den DGV Scoring Record hoch. Die neueste
+                      erkannte Runde liefert danach automatisch die
+                      Standardwerte fuer deine Live-Vorschau.
+                    </p>
+                  </div>
+                  <span className="soft-badge">PDF</span>
+                </div>
+
+                <label className="upload-box">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handleImport}
+                    disabled={isImporting}
+                  />
+                  <span>
+                    {isImporting
+                      ? 'Import läuft…'
+                      : 'PDF auswählen und Runden ins Profil übernehmen'}
+                  </span>
+                </label>
+              </article>
+            </section>
+
+            <section>
+              <article className="panel wide-panel">
                 <div className="section-header">
                   <div>
                     <h2>Score-Historie</h2>
-                    <p>
-                      Alle importierten und manuell erfassten Runden im Profil.
-                    </p>
+                    <p>Alle vorhandenen Runden in deinem Profil.</p>
                   </div>
                   <span className="soft-badge">
                     {appState.rounds.length} Einträge
@@ -772,12 +755,13 @@ function App() {
                         <th>GBE</th>
                         <th>SD</th>
                         <th>Quelle</th>
+                        <th>Aktion</th>
                       </tr>
                     </thead>
                     <tbody>
                       {appState.rounds.length === 0 ? (
                         <tr>
-                          <td colSpan="6" className="empty-cell">
+                          <td colSpan="7" className="empty-cell">
                             Noch keine Runden gespeichert.
                           </td>
                         </tr>
@@ -805,52 +789,21 @@ function App() {
                               </span>
                             </td>
                             <td>{round.source === 'import' ? 'Import' : 'Manuell'}</td>
+                            <td>
+                              <button
+                                type="button"
+                                className="row-delete-button"
+                                onClick={() => handleDeleteRound(round.id)}
+                                disabled={deletingRoundId === round.id}
+                              >
+                                {deletingRoundId === round.id ? 'Lösche…' : 'Löschen'}
+                              </button>
+                            </td>
                           </tr>
                         ))
                       )}
                     </tbody>
                   </table>
-                </div>
-              </article>
-
-              <article className="panel">
-                <div className="section-header">
-                  <div>
-                    <h2>Berechnungsdetails</h2>
-                    <p>
-                      Diese Score Differentials fließen aktuell in den HCPI ein.
-                    </p>
-                  </div>
-                  <span className="soft-badge">
-                    {summary.usedDifferentials.length} genutzt
-                  </span>
-                </div>
-
-                <div className="calculation-stack">
-                  <div className="highlight-card">
-                    <span>Berechneter HCPI</span>
-                    <strong>{numberDisplay(summary.currentHcp)}</strong>
-                    <p>
-                      {summary.currentHcp === null
-                        ? 'Sobald importierte oder manuelle Runden vorhanden sind, erscheint hier dein HCPI.'
-                        : 'Auf Basis der gelieferten Rechenregeln ohne ESR und ohne Caps.'}
-                    </p>
-                  </div>
-
-                  <div className="score-list">
-                    {summary.activeDifferentials.length === 0 ? (
-                      <p className="muted-copy">
-                        Noch keine auswertbaren Differentials vorhanden.
-                      </p>
-                    ) : (
-                      summary.activeDifferentials.map((entry, index) => (
-                        <div className="score-row" key={`${entry.id}-${index}`}>
-                          <span>{entry.eventName}</span>
-                          <strong>{formatScoreDifferential(entry.scoreDifferential)}</strong>
-                        </div>
-                      ))
-                    )}
-                  </div>
                 </div>
               </article>
             </section>

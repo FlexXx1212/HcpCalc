@@ -218,6 +218,10 @@ table {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.wide-panel {
+  width: 100%;
+}
+
 .lower-grid {
   align-items: start;
 }
@@ -242,6 +246,20 @@ table {
   max-width: 22ch;
   font-weight: 700;
   color: var(--ink-strong);
+}
+
+.context-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.context-strip span {
+  padding: 0.55rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(242, 239, 194, 0.55);
+  color: var(--ink-soft);
 }
 
 .round-form,
@@ -339,6 +357,28 @@ th {
 
 .score-row span {
   color: var(--ink-strong);
+}
+
+.preview-card {
+  border-color: rgba(147, 166, 5, 0.3);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(210, 217, 4, 0.24));
+}
+
+.row-delete-button {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.55rem 0.9rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fffef7;
+  background: linear-gradient(135deg, #c95c2d, #a6401a);
+}
+
+.row-delete-button:disabled {
+  cursor: wait;
+  opacity: 0.75;
 }
 
 .empty-cell {

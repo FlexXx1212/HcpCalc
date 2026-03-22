@@ -1,14 +1,14 @@
-# Golf HCPI Calculator
+# HcpCalc
 
-Single Page Application auf Basis von `Vite + React`, mit der Golfspieler ihr Handicap nach den gelieferten Regeln berechnen, DGV-Scoring-Records als PDF importieren und neue GBE-Runden im eigenen Firebase-Profil speichern können.
+Single Page Application auf Basis von `Vite + React`, mit der Golfspieler ihr Handicap nach den gelieferten Regeln berechnen, DGV-Scoring-Records als PDF importieren und ein neues HCP als Live-Vorschau simulieren koennen.
 
 ## Funktionen
 
 - Google-Login über Firebase Auth
 - Persistentes Benutzerprofil in Firestore
 - Import von DGV-Scoring-Record-PDFs
-- Manuelle Erfassung neuer GBE-Runden
-- Speicherung der zuletzt verwendeten Platzdaten
+- Live-Vorschau fuer neues HCP mit minimalen Eingaben
+- Defaultwerte aus der neuesten vorhandenen Runde
 - HCPI-Berechnung nach `calculation_rules.txt`
 
 ## Voraussetzungen
@@ -39,7 +39,7 @@ Jeder Benutzer wird in Firestore unter `users/{uid}` gespeichert. Das Dokument e
   - `currentHcp`
   - `lastUsedCourseDefaults`
 - `rounds`
-  - importierte und manuell angelegte Runden
+  - importierte und vorhandene Runden
 - `calculationSnapshot`
   - zuletzt berechneter HCPI
   - aktuell verwendete Score Differentials
@@ -54,6 +54,8 @@ Die Berechnung folgt den Regeln in `calculation_rules.txt`:
 - maximal 20 aktive Score Differentials
 - keine Exceptional Score Reduction
 - keine Soft-/Hard-Caps
+
+Die Live-Vorschau speichert keine neue Runde, sondern berechnet nur hypothetisch den naechsten HCP auf Basis der aktuellen Eingaben.
 
 ## Importformat
 
