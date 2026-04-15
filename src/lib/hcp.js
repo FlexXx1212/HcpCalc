@@ -68,8 +68,8 @@ export function calculateScoreDifferential({
   return roundToTenth(rawScore)
 }
 
-export function buildHandicapSummary(rounds) {
-  const activeDifferentials = rounds
+function buildDifferentials(rounds) {
+  return rounds
     .filter((round) => Number.isFinite(round.scoreDifferential))
     .map((round) => ({
       ...round,
@@ -77,9 +77,32 @@ export function buildHandicapSummary(rounds) {
     }))
     .sort((left, right) => left.scoreDifferential - right.scoreDifferential)
     .slice(0, 20)
+}
 
-  const currentHcp = calculateHandicapFromDifferentials(activeDifferentials)
+export function buildHandicapSummary(rounds) {
+  const activeDifferentials = buildDifferentials(rounds)
+  const rawHcp = calculateHandicapFromDifferentials(activeDifferentials)
   const usedCount = getUsedScoreCount(activeDifferentials.length)
+
+  // Rule: HCP in range [26.5, 54] can never get worse than the best (lowest)
+  // value previously achieved in that range.
+  const chronologicalRounds = [...rounds].reverse()
+  let lowestInRange = null
+
+  for (let i = 1; i <= chronologicalRounds.length; i++) {
+    const diffs = buildDifferentials(chronologicalRounds.slice(0, i))
+    const hcp = calculateHandicapFromDifferentials(diffs)
+    if (hcp !== null && hcp >= 26.5 && hcp <= 54) {
+      if (lowestInRange === null || hcp < lowestInRange) {
+        lowestInRange = hcp
+      }
+    }
+  }
+
+  const currentHcp =
+    rawHcp !== null && lowestInRange !== null && rawHcp > lowestInRange
+      ? lowestInRange
+      : rawHcp
 
   return {
     currentHcp,
