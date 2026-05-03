@@ -1,0 +1,593 @@
+[
+	{
+		"club": "Golfclub Ansbach",
+		"tees": {
+			"yellow": {
+				"18": {
+					"cr": 69.9,
+					"slope": 131,
+					"par": 70
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 34
+				}
+			}
+		}
+	},
+	{
+		"club": "Golfclub Bad Kissingen",
+		"tees": {
+			"yellow": {
+				"18": {
+					"cr": 70.7,
+					"slope": 126,
+					"par": 70
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 35
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 35
+				}
+			}
+		}
+	},
+	{
+		"club": "Golf-Club Bayreuth",
+		"tees": {
+			"yellow": {
+				"18": {
+					"cr": 70.4,
+					"slope": 130,
+					"par": 72
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				}
+			},
+			"white": {
+				"18": {
+					"cr": 71.8,
+					"slope": 135,
+					"par": 72
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				}
+			}
+		}
+	},
+	{
+		"club": "Golf-Club Coburg Schloss Tambach",
+		"tees": {
+			"yellow": {
+				"18": {
+					"cr": 72.6,
+					"slope": 135,
+					"par": 72
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				}
+			}
+		}
+	},
+	{
+		"club": "Golfclub Fränkische Schweiz",
+		"tees": {
+			"yellow": {
+				"18": {
+					"cr": 71.1,
+					"slope": 125,
+					"par": 72
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				}
+			}
+		}
+	},
+	{
+		"club": "1. Golf Club Fürth",
+		"tees": {
+			"yellow": {
+				"18": {
+					"cr": 71.1,
+					"slope": 125,
+					"par": 71
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 35
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				}
+			}
+		}
+	},
+	{
+		"club": "Golfclub Hassberge",
+		"tees": {
+			"yellow": {
+				"18": {
+					"cr": 71.7,
+					"slope": 123,
+					"par": 73
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 38
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 35
+				}
+			}
+		}
+	},
+	{
+		"club": "Golfclub Hof",
+		"tees": {
+			"yellow": {
+				"18": {
+					"cr": 72.0,
+					"slope": 133,
+					"par": 72
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				}
+			},
+			"white": {
+				"18": {
+					"cr": 73.6,
+					"slope": 137,
+					"par": 72
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				}
+			}
+		}
+	},
+	{
+		"club": "Golfclub Kitzingen",
+		"tees": {
+			"yellow": {
+				"18": {
+					"cr": 71.8,
+					"slope": 133,
+					"par": 72
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				}
+			}
+		}
+	},
+	{
+		"club": "Golfclub Kronach - Gut Nagel",
+		"tees": {
+			"yellow": {
+				"18": {
+					"cr": 72.8,
+					"slope": 133,
+					"par": 72
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				}
+			}
+		}
+	},
+	{
+		"club": "Golfclub Lichtenau-Weickershof",
+		"tees": {
+			"yellow": {
+				"18": {
+					"cr": 70.7,
+					"slope": 121,
+					"par": 72
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				}
+			}
+		}
+	},
+	{
+		"club": "Golfclub Stiftland",
+		"tees": {
+			"yellow": {
+				"18": {
+					"cr": 72.2,
+					"slope": 130,
+					"par": 72
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				}
+			},
+			"white": {
+				"18": {
+					"cr": 73.8,
+					"slope": 137,
+					"par": 72
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				}
+			}
+		}
+	},
+	{
+		"club": "Golf-Club Maria Bildhausen",
+		"tees": {
+			"yellow": {
+				"18": {
+					"cr": 71.2,
+					"slope": 134,
+					"par": 72
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				}
+			},
+			"white": {
+				"18": {
+					"cr": 73.5,
+					"slope": 136,
+					"par": 72
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				}
+			}
+		}
+	},
+	{
+		"club": "Golfclub Oberfranken",
+		"tees": {
+			"yellow": {
+				"18": {
+					"cr": 72.1,
+					"slope": 136,
+					"par": 72
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				}
+			}
+		}
+	},
+	{
+		"club": "Golfclub Pottenstein-Weidenloh",
+		"tees": {
+			"yellow": {
+				"18": {
+					"cr": 71.9,
+					"slope": 135,
+					"par": 72
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				}
+			},
+			"white": {
+				"18": {
+					"cr": 75.7,
+					"slope": 137,
+					"par": 72
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				}
+			}
+		}
+	},
+	{
+		"club": "Golfclub Steigerwald",
+		"tees": {
+			"yellow": {
+				"18": {
+					"cr": 72.2,
+					"slope": 129,
+					"par": 72
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				}
+			}
+		}
+	},
+	{
+		"club": "Golfclub Reichsstadt Bad Windsheim",
+		"tees": {
+			"yellow": {
+				"18": {
+					"cr": 75.8,
+					"slope": 130,
+					"par": 73
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 37
+				}
+			}
+		}
+	},
+	{
+		"club": "Golfclub Schloss Mainsondheim",
+		"tees": {
+			"yellow": {
+				"18": {
+					"cr": 72.2,
+					"slope": 134,
+					"par": 72
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				}
+			}
+		}
+	},
+	{
+		"club": "Golf Club Schweinfurt",
+		"tees": {
+			"yellow": {
+				"18": {
+					"cr": 69.2,
+					"slope": 117,
+					"par": 72
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				}
+			}
+		}
+	},
+	{
+		"club": "Golf-Club Herzogenaurach",
+		"tees": {
+			"yellow": {
+				"18": {
+					"cr": 73.4,
+					"slope": 129,
+					"par": 73
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 37
+				}
+			}
+		}
+	},
+	{
+		"club": "Golfclub Main-Spessart",
+		"tees": {
+			"yellow": {
+				"18": {
+					"cr": 71.7,
+					"slope": 128,
+					"par": 72
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				}
+			}
+		}
+	},
+	{
+		"club": "Golfanlage Gut Leimershof",
+		"tees": {
+			"yellow": {
+				"18": {
+					"cr": 72.1,
+					"slope": 135,
+					"par": 72
+				},
+				"front9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				},
+				"back9": {
+					"cr": null,
+					"slope": null,
+					"par": 36
+				}
+			}
+		}
+	},
+	{
+		"club": "Golf Club Erlangen",
+		"tees": {
+			"yellow": {
+				"18": {
+					"cr": 69.3,
+					"slope": 128,
+					"par": 70
+				},
+				"front9": {
+					"cr": 35.8,
+					"slope": 134,
+					"par": 37
+				},
+				"back9": {
+					"cr": 33.4,
+					"slope": 122,
+					"par": 33
+				}
+			}
+		}
+	}
+]
