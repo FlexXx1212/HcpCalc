@@ -33,9 +33,10 @@ function calculateHandicapFromDifferentials(differentials) {
     return roundToTenth(bestScore - 1)
   }
 
-  return roundToTenth(
-    average(usedDifferentials.map((entry) => entry.scoreDifferential)),
-  )
+  const avg = average(usedDifferentials.map((entry) => entry.scoreDifferential))
+  const adjustment = differentials.length === 6 ? -1 : 0
+
+  return roundToTenth(avg + adjustment)
 }
 
 export function calculateScoreDifferential({

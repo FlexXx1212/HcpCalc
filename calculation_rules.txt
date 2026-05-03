@@ -46,7 +46,7 @@ HCPI = bestes SD - 1.0
 HCPI = Durchschnitt der besten 1 SD
 
 6 Ergebnisse:
-HCPI = Durchschnitt der besten 2 SD
+HCPI = Durchschnitt der besten 2 SD - 1.0
 
 7–8 Ergebnisse:
 HCPI = Durchschnitt der besten 2 SD
